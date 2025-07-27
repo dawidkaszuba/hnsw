@@ -1,14 +1,21 @@
 package pl.dawidkaszuba.model;
 
+import lombok.Getter;
+import pl.dawidkaszuba.distance.DistanceFunction;
+
 import java.util.*;
 
+@Getter
 public class Node {
-    private final int id;
+
+    private static final int NEIGHBORS_MAX_NUMBER = 16;
+
+    private final Long id;
     private final double[] vector;
     private final int level;
     private final Map<Integer, List<Node>> neighborsByLevel;
 
-    public Node(int id, double[] vector, int level) {
+    public Node(Long id, double[] vector, int level) {
         this.id = id;
         this.vector = vector;
         this.level = level;
@@ -20,7 +27,41 @@ public class Node {
     }
 
 
-    public void addNeighbor(int level, Node neighbor) {
-        neighborsByLevel.computeIfAbsent(level, l -> new ArrayList<>()).add(neighbor);
+
+
+    public void addNeighbor(int level, Node neighbor, DistanceFunction distanceFunction) {
+
+        List<Node> workingList = new ArrayList<>(getNeighbors(level));
+
+
+        if (workingList.size() >= NEIGHBORS_MAX_NUMBER && !workingList.contains(neighbor)) {
+            workingList.add(neighbor);
+
+
+            workingList.sort((n1, n2) -> {
+                double d1 = distanceFunction.compute(this.vector, n1.vector);
+                double d2 = distanceFunction.compute(this.vector, n2.vector);
+                return Double.compare(d1, d2);
+            });
+
+            workingList = workingList.subList(0, NEIGHBORS_MAX_NUMBER);
+            neighborsByLevel.put(level, workingList);
+
+        } else {
+            neighborsByLevel.computeIfAbsent(level, l -> new ArrayList<>()).add(neighbor);
+        }
+
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof Node)) return false;
+        Node node = (Node) o;
+        return Objects.equals(getId(), node.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(getId());
     }
 }
