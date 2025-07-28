@@ -8,18 +8,18 @@ import java.util.*;
 @Getter
 public class Node {
 
-    private static final int NEIGHBORS_MAX_NUMBER = 16;
-
     private final Long id;
     private final double[] vector;
     private final int level;
     private final Map<Integer, List<Node>> neighborsByLevel;
+    private final int maxNeighborsNumber;
 
-    public Node(Long id, double[] vector, int level) {
+    public Node(Long id, double[] vector, int level, int maxNeighborsNumber) {
         this.id = id;
         this.vector = vector;
         this.level = level;
         this.neighborsByLevel = new HashMap<>();
+        this.maxNeighborsNumber = maxNeighborsNumber;
     }
 
     public List<Node> getNeighbors(int level) {
@@ -27,28 +27,27 @@ public class Node {
     }
 
 
-
-
     public void addNeighbor(int level, Node neighbor, DistanceFunction distanceFunction) {
 
         List<Node> workingList = new ArrayList<>(getNeighbors(level));
 
+        if (!workingList.contains(neighbor)) {
 
-        if (workingList.size() >= NEIGHBORS_MAX_NUMBER && !workingList.contains(neighbor)) {
-            workingList.add(neighbor);
+            if (workingList.size() >= this.maxNeighborsNumber) {
+                workingList.add(neighbor);
 
+                workingList.sort((n1, n2) -> {
+                    double d1 = distanceFunction.compute(this.vector, n1.vector);
+                    double d2 = distanceFunction.compute(this.vector, n2.vector);
+                    return Double.compare(d1, d2);
+                });
 
-            workingList.sort((n1, n2) -> {
-                double d1 = distanceFunction.compute(this.vector, n1.vector);
-                double d2 = distanceFunction.compute(this.vector, n2.vector);
-                return Double.compare(d1, d2);
-            });
+                workingList = workingList.subList(0, this.maxNeighborsNumber);
+                neighborsByLevel.put(level, workingList);
 
-            workingList = workingList.subList(0, NEIGHBORS_MAX_NUMBER);
-            neighborsByLevel.put(level, workingList);
-
-        } else {
-            neighborsByLevel.computeIfAbsent(level, l -> new ArrayList<>()).add(neighbor);
+            } else {
+                neighborsByLevel.computeIfAbsent(level, l -> new ArrayList<>()).add(neighbor);
+            }
         }
 
     }
